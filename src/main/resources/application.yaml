@@ -1,3 +1,28 @@
+server:
+  port: 8486
+
 spring:
   application:
     name: job-offer-service
+  datasource:
+    url: jdbc:postgresql://localhost:5434/job_offer
+    username: super_jobber
+    password: my_secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

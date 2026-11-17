@@ -1,0 +1,1 @@
+package com.pixid.joboffer.domain;
