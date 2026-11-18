@@ -62,9 +62,15 @@ Créer des classes distinctes pour la persistance(dans infrastructure/persistenc
 Une offre d'emploi traverse jusqu'à 6 états, dont 3 optionnels(`TO_FINALIZE`, `TO_APPROVE`, `TO_POST`) selon la configuration de l'entreprise. De plus, l'API doit exposer dynamiquement les transitions disponibles (`availableTransitions`).
 
 - ### Décision : 
-  - Centraliser l'algorithme de calcul des transitions et de résolution de l'état cible dans une classe dédiée du domaine (`JobOfferStateMachine`).
-  - Cet algo saute automatiquement les étapes désactivées jusqu'à atteindre la prochaine étape requise ou l'état PUBLISHED.
-  - L'agrégat `JobOffer` expose également `getAvailableTransitions(CompanyConfig)` pour permettre aux consommateurs (API, IHM) de connaître les actions légitimes à un instant $t$.
+  - Centraliser l'algorithme de calcul des transitions et de résolution de l'état cible dans une classe dédiée du
+    domaine (`JobOfferStateMachine`), pilotée par **actions** (`TransitionAction`) : `allowedActions(status)` donne les
+    actions autorisées par statut, `targetStatus(status, action, config)` l'état cible (ou
+    `InvalidStateTransitionException`).
+  - Cet algo saute automatiquement les étapes désactivées (`partialSaveEnabled` ↔ `TO_FINALIZE`, `approvalRequired` ↔
+    `TO_APPROVE`, `manualPostingRequired` ↔ `TO_POST`) jusqu'à atteindre la prochaine étape requise ou l'état PUBLISHED.
+  - L'agrégat `JobOffer` expose `apply(action, config, clock)` et `availableActions(config)` pour permettre aux
+    consommateurs (API, IHM) de connaître les actions légitimes à un instant $t$ (règles de complétude incluses, voir
+    ADR-06).
 
 - ### Conséquences :
   - #### Positives : 
@@ -120,3 +126,40 @@ incomplète (`partialSaveEnabled`) et peut être modifiée en concurrence par pl
   - #### Négatives :
   L'existence de l'entreprise n'est pas garantie par la base (à valider côté Company si nécessaire) ; les invariants de
   complétude reposent entièrement sur le domaine.
+
+# ADR-06 : Règles métier des transitions (complétude, REJECT, clôture, horloge)
+
+- ### Statut : Accepté
+
+- ### Contexte :
+
+La spécification décrit le cycle de vie mais laisse plusieurs points ouverts : que devient une offre rejetée ? Depuis
+quels états peut-on clore une offre ? À quel moment une offre enregistrée partiellement doit-elle être complète ? Par
+ailleurs, les dates (`createdAt`, `updatedAt`, `publishedAt`) doivent être testables de façon déterministe.
+
+- ### Décision :
+  - **Actions par statut** : `DRAFT` → `SUBMIT` ; `TO_FINALIZE` → `FINALIZE` ; `TO_APPROVE` → `APPROVE`, `REJECT` ;
+    `TO_POST` → `POST` ; `PUBLISHED` → `CLOSE`, `EXPIRE` ; `CLOSED` → aucune.
+  - **`REJECT` → `DRAFT`** : l'offre rejetée redevient modifiable par le recruteur, qui peut la corriger puis la
+    resoumettre (le cycle d'approbation repart du début).
+  - **`CLOSE` / `EXPIRE` uniquement depuis `PUBLISHED`** : une offre non publiée n'a pas à être « close » (elle reste un
+    brouillon ou est rejetée).
+  - **Complétude** (titre, location, compensation avec ≥ 1 entrée) exigée dès que l'offre dépasse `TO_FINALIZE` :
+    - `SUBMIT` avec `partialSaveEnabled` → `TO_FINALIZE` accepte une offre incomplète (elle sera complétée en
+      `TO_FINALIZE`) ;
+    - `SUBMIT` sans `partialSaveEnabled`, et `FINALIZE`, exigent une offre complète (`DomainValidationException`
+      sinon) ;
+    - à la création, des données partielles ne sont acceptées que si `partialSaveEnabled`.
+  - `availableActions(config)` exclut les actions dont la règle de complétude n'est pas satisfaite.
+  - `publishedAt` est renseigné à l'entrée en `PUBLISHED`.
+  - Le temps est fourni par une `java.time.Clock` passée en paramètre (`createDraft`, `update`, `apply`) plutôt
+    qu'appelé via `Instant.now()` ; `JobOffer.rehydrate(...)` reconstruit l'agrégat depuis la persistance sans
+    validation métier ni appel à l'horloge, et porte la `version` (verrou optimiste, ADR-05).
+
+- ### Conséquences :
+  - #### Positives :
+  Règles explicites et testées unitairement ; l'API peut n'afficher que les actions réellement exécutables ; tests de
+  dates déterministes ; la persistance ne déclenche jamais de règle métier.
+  - #### Négatives :
+  Une offre rejetée perd son avancement (elle repasse par toutes les étapes) ; la `Clock` doit être transmise par la
+  couche application à chaque commande.

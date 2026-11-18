@@ -17,8 +17,8 @@ public class PostgresCompanyConfigAdapter implements CompanyConfigProvider {
 
     private static CompanyConfig toDomain(CompanyConfigJpaEntity entity) {
         return new CompanyConfig(
-                entity.isPartialSaveEnabled(),
                 entity.isApprovalRequired(),
+                entity.isPartialSaveEnabled(),
                 entity.isManualPostingRequired()
         );
     }
@@ -38,9 +38,9 @@ public class PostgresCompanyConfigAdapter implements CompanyConfigProvider {
                     created.setCompanyId(companyId.value());
                     return created;
                 });
-        entity.setPartialSaveEnabled(config.requireFinalization());
-        entity.setApprovalRequired(config.requireApproval());
-        entity.setManualPostingRequired(config.requirePostReview());
+        entity.setApprovalRequired(config.approvalRequired());
+        entity.setPartialSaveEnabled(config.partialSaveEnabled());
+        entity.setManualPostingRequired(config.manualPostingRequired());
         return toDomain(jpaRepository.save(entity));
     }
 }

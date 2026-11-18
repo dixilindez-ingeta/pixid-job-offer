@@ -3,8 +3,6 @@ package com.pixid.joboffer.domain.valueobject;
 import com.pixid.joboffer.domain.validator.Guard;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 public record Address(
         List<String> lines,
@@ -13,8 +11,6 @@ public record Address(
         String region,
         String countryCode
 ) {
-    private static final Set<String> COUNTRIES = Set.of(Locale.getISOCountries());
-
     public Address {
         Guard.notBlank(city, "City is required for a custom address");
         Guard.validIsoCountry(countryCode, "Country code must be a valid ISO 3166-1 alpha-2 code");

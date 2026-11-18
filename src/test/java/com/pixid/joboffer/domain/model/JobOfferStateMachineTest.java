@@ -1,79 +1,105 @@
 package com.pixid.joboffer.domain.model;
 
-import com.pixid.joboffer.domain.exception.DomainValidationException;
+import com.pixid.joboffer.domain.exception.InvalidStateTransitionException;
 import com.pixid.joboffer.domain.valueobject.CompanyConfig;
 import com.pixid.joboffer.domain.valueobject.JobOfferStatus;
+import com.pixid.joboffer.domain.valueobject.TransitionAction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import java.util.EnumSet;
+import java.util.Set;
+
+import static com.pixid.joboffer.domain.valueobject.JobOfferStatus.*;
+import static com.pixid.joboffer.domain.valueobject.TransitionAction.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JobOfferStateMachineTest {
 
+    private static final CompanyConfig ALL_ENABLED = new CompanyConfig(true, true, true);
+    private static final CompanyConfig ALL_DISABLED = CompanyConfig.defaults();
+
     @Test
-    @DisplayName("Chemin nominal : tous les flags activés (Finalization -> Approval -> PostReview -> Published)")
+    @DisplayName("Chemin nominal : tous les flags activés (DRAFT -> TO_FINALIZE -> TO_APPROVE -> TO_POST -> PUBLISHED -> CLOSED)")
     void nominalPathAllFlagsEnabled() {
-        CompanyConfig config = new CompanyConfig(true, true, true);
-
-        JobOfferStatus next1 = JobOfferStateMachine.getNextStatus(JobOfferStatus.DRAFT, config);
-        assertThat(next1).isEqualTo(JobOfferStatus.TO_FINALIZE);
-
-        JobOfferStatus next2 = JobOfferStateMachine.getNextStatus(next1, config);
-        assertThat(next2).isEqualTo(JobOfferStatus.TO_APPROVE);
-
-        JobOfferStatus next3 = JobOfferStateMachine.getNextStatus(next2, config);
-        assertThat(next3).isEqualTo(JobOfferStatus.TO_POST);
-
-        JobOfferStatus next4 = JobOfferStateMachine.getNextStatus(next3, config);
-        assertThat(next4).isEqualTo(JobOfferStatus.PUBLISHED);
+        assertThat(JobOfferStateMachine.targetStatus(DRAFT, SUBMIT, ALL_ENABLED)).isEqualTo(TO_FINALIZE);
+        assertThat(JobOfferStateMachine.targetStatus(TO_FINALIZE, FINALIZE, ALL_ENABLED)).isEqualTo(TO_APPROVE);
+        assertThat(JobOfferStateMachine.targetStatus(TO_APPROVE, APPROVE, ALL_ENABLED)).isEqualTo(TO_POST);
+        assertThat(JobOfferStateMachine.targetStatus(TO_POST, POST, ALL_ENABLED)).isEqualTo(PUBLISHED);
+        assertThat(JobOfferStateMachine.targetStatus(PUBLISHED, CLOSE, ALL_ENABLED)).isEqualTo(CLOSED);
     }
 
     @Test
-    @DisplayName("Flag individuel : Finalization désactivé, les autres activés")
-    void disableFinalizationOnly() {
-        CompanyConfig config = new CompanyConfig(false, true, true);
-
-        JobOfferStatus next = JobOfferStateMachine.getNextStatus(JobOfferStatus.DRAFT, config);
-        assertThat(next).isEqualTo(JobOfferStatus.TO_APPROVE);
-    }
-
-    @Test
-    @DisplayName("Flag individuel : Approval désactivé, les autres activés")
-    void disableApprovalOnly() {
-        CompanyConfig config = new CompanyConfig(true, false, true);
-
-        JobOfferStatus nextFromFinalize = JobOfferStateMachine.getNextStatus(JobOfferStatus.TO_FINALIZE, config);
-        assertThat(nextFromFinalize).isEqualTo(JobOfferStatus.TO_POST);
-    }
-
-    @Test
-    @DisplayName("Flag individuel : PostReview désactivé, les autres activés")
-    void disablePostReviewOnly() {
-        CompanyConfig config = new CompanyConfig(true, true, false);
-
-        JobOfferStatus nextFromApprove = JobOfferStateMachine.getNextStatus(JobOfferStatus.TO_APPROVE, config);
-        assertThat(nextFromApprove).isEqualTo(JobOfferStatus.PUBLISHED);
-    }
-
-    @Test
-    @DisplayName("Combinaison : Tous les flags optionnels désactivés (DRAFT -> PUBLISHED direct)")
+    @DisplayName("Tous les flags désactivés : SUBMIT publie directement")
     void allFlagsDisabledDirectPublish() {
-        CompanyConfig config = new CompanyConfig(false, false, false);
+        assertThat(JobOfferStateMachine.targetStatus(DRAFT, SUBMIT, ALL_DISABLED)).isEqualTo(PUBLISHED);
+    }
 
-        JobOfferStatus next = JobOfferStateMachine.getNextStatus(JobOfferStatus.DRAFT, config);
-        assertThat(next).isEqualTo(JobOfferStatus.PUBLISHED);
+    @ParameterizedTest(name = "approval={0}, partialSave={1}, manualPosting={2} : SUBMIT -> {3}")
+    @CsvSource({
+            "false, true,  false, TO_FINALIZE",
+            "true,  false, false, TO_APPROVE",
+            "false, false, true,  TO_POST",
+            "true,  false, true,  TO_APPROVE",
+            "false, false, false, PUBLISHED"
+    })
+    @DisplayName("SUBMIT saute les états désactivés")
+    void submitSkipsDisabledStates(boolean approval, boolean partialSave, boolean manualPosting, JobOfferStatus expected) {
+        CompanyConfig config = new CompanyConfig(approval, partialSave, manualPosting);
+        assertThat(JobOfferStateMachine.targetStatus(DRAFT, SUBMIT, config)).isEqualTo(expected);
     }
 
     @Test
-    @DisplayName("Transition interdite : Tentative d'avancer depuis PUBLISHED ou CLOSED")
-    void forbiddenTransitionsFromTerminalStates() {
-        CompanyConfig config = new CompanyConfig(true, true, true);
+    @DisplayName("FINALIZE et APPROVE sautent les états désactivés")
+    void forwardActionsSkipDisabledStates() {
+        CompanyConfig noApproval = new CompanyConfig(false, true, true);
+        assertThat(JobOfferStateMachine.targetStatus(TO_FINALIZE, FINALIZE, noApproval)).isEqualTo(TO_POST);
 
-        assertThatThrownBy(() -> JobOfferStateMachine.getNextStatus(JobOfferStatus.PUBLISHED, config))
-                .isInstanceOf(DomainValidationException.class);
+        CompanyConfig noManualPosting = new CompanyConfig(true, true, false);
+        assertThat(JobOfferStateMachine.targetStatus(TO_FINALIZE, FINALIZE, noManualPosting)).isEqualTo(TO_APPROVE);
+        assertThat(JobOfferStateMachine.targetStatus(TO_APPROVE, APPROVE, noManualPosting)).isEqualTo(PUBLISHED);
+    }
 
-        assertThatThrownBy(() -> JobOfferStateMachine.getNextStatus(JobOfferStatus.CLOSED, config))
-                .isInstanceOf(DomainValidationException.class);
+    @Test
+    @DisplayName("REJECT renvoie en DRAFT")
+    void rejectGoesBackToDraft() {
+        assertThat(JobOfferStateMachine.targetStatus(TO_APPROVE, REJECT, ALL_ENABLED)).isEqualTo(DRAFT);
+    }
+
+    @Test
+    @DisplayName("CLOSE et EXPIRE mènent à CLOSED depuis PUBLISHED")
+    void closeAndExpireFromPublished() {
+        assertThat(JobOfferStateMachine.targetStatus(PUBLISHED, CLOSE, ALL_DISABLED)).isEqualTo(CLOSED);
+        assertThat(JobOfferStateMachine.targetStatus(PUBLISHED, EXPIRE, ALL_DISABLED)).isEqualTo(CLOSED);
+    }
+
+    @Test
+    @DisplayName("Actions autorisées par statut")
+    void allowedActionsPerStatus() {
+        assertThat(JobOfferStateMachine.allowedActions(DRAFT)).containsExactly(SUBMIT);
+        assertThat(JobOfferStateMachine.allowedActions(TO_FINALIZE)).containsExactly(FINALIZE);
+        assertThat(JobOfferStateMachine.allowedActions(TO_APPROVE)).containsExactlyInAnyOrder(APPROVE, REJECT);
+        assertThat(JobOfferStateMachine.allowedActions(TO_POST)).containsExactly(POST);
+        assertThat(JobOfferStateMachine.allowedActions(PUBLISHED)).containsExactlyInAnyOrder(CLOSE, EXPIRE);
+        assertThat(JobOfferStateMachine.allowedActions(CLOSED)).isEmpty();
+    }
+
+    @ParameterizedTest(name = "{0} : actions interdites rejetées")
+    @EnumSource(JobOfferStatus.class)
+    @DisplayName("Toute action non autorisée lève InvalidStateTransitionException")
+    void forbiddenActionsAreRejected(JobOfferStatus status) {
+        Set<TransitionAction> forbidden = EnumSet.allOf(TransitionAction.class);
+        forbidden.removeAll(JobOfferStateMachine.allowedActions(status));
+
+        for (TransitionAction action : forbidden) {
+            assertThatThrownBy(() -> JobOfferStateMachine.targetStatus(status, action, ALL_ENABLED))
+                    .isInstanceOf(InvalidStateTransitionException.class)
+                    .hasMessageContaining(action.name())
+                    .hasMessageContaining(status.name());
+        }
     }
 }

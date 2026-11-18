@@ -20,9 +20,16 @@
 
 ## Etape 3 : Machine à états et logiques métier pure
 - **3.1 :** Implémenter l'agrégat `JobOffer` contenant les champs requis, les timestamps(`createdAt`, `updatedAt`, `publishedAt`) et la logique de mise à jour (autorisée uniquement en `DRAFT` ou `TO_FINALIZE`).
-- **3.2 :** Implémenter le moteur de résolution des transitions (`JobOfferStateMachine`) qui calcule l'état cible en sautant dynamiquement les états optionnels désactivés dans `CompanyConfig` (qu'on a finalement décidé de traiter comme value object avec les champs `requireFinalization`, `requireApproval`, `requirePostReview`).
-- **3.3 :** Implémenter la méthode `getAvailableTransitions(CompanyConfig)` sur `JobOffer` pour calculer les actions possibles à un instant $t$.
-- **3.4 :** Écrire les tests unitaires sur la machine à états : tester le chemin nominal, chaque flag activé individuellement, les combinaisons de flags, et les transitions interdites.
+- **3.2 :** Implémenter le moteur de résolution des transitions (`JobOfferStateMachine`) qui calcule l'état cible en
+  sautant dynamiquement les états optionnels désactivés dans `CompanyConfig` (value object `CompanyConfig` avec les
+  champs `approvalRequired`, `partialSaveEnabled`, `manualPostingRequired`), piloté par actions (`TransitionAction`) :
+  `REJECT` → `DRAFT`, `CLOSE`/`EXPIRE` depuis `PUBLISHED` uniquement (ADR-06).
+- **3.3 :** Implémenter `apply(action, config, clock)` et `availableActions(config)` sur `JobOffer` (actions possibles à
+  un instant $t$, règles de complétude incluses), les fabriques `createDraft` (données partielles si
+  `partialSaveEnabled`) et `rehydrate` (sans validation, utilisée par le mapper), et l'injection d'une `Clock`.
+- **3.4 :** Écrire les tests unitaires sur la machine à états et l'agrégat (`JobOfferStateMachineTest`,
+  `JobOfferTest`) : chemin nominal, flags individuels et combinés, transitions interdites, création partielle, mise à
+  jour interdite, `REJECT`, `publishedAt`, `availableActions` par configuration.
 
 # Etape 4 : Ports, adaptateurs et persistance
 

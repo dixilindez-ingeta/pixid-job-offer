@@ -6,8 +6,9 @@ import com.pixid.joboffer.infrastructure.persistence.entity.JobOfferBonusJpaEnti
 import com.pixid.joboffer.infrastructure.persistence.entity.JobOfferJpaEntity;
 import com.pixid.joboffer.infrastructure.persistence.entity.JobOfferSalaryJpaEntity;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class JobOfferMapper {
 
@@ -19,87 +20,92 @@ public final class JobOfferMapper {
         entity.setId(domain.getId().value());
         entity.setCompanyId(domain.getCompanyId().value());
         entity.setTitle(domain.getTitle());
-
-        // Mapping de la Location
-        Location loc = domain.getLocation();
-        entity.setLocationType(loc.type().name());
-        if (loc.address() != null) {
-            List<String> lines = loc.address().lines();
-            if (lines != null) {
-                if (!lines.isEmpty()) entity.setAddressLine1(lines.get(0));
-                if (lines.size() > 1) entity.setAddressLine2(lines.get(1));
-                if (lines.size() > 2) entity.setAddressLine3(lines.get(2));
-            }
-            entity.setPostalCode(loc.address().postalCode());
-            entity.setCity(loc.address().city());
-            entity.setRegion(loc.address().region());
-            entity.setCountryCode(loc.address().countryCode());
-        }
-
         entity.setStatus(domain.getStatus().name());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
         entity.setPublishedAt(domain.getPublishedAt());
+        entity.setVersion(domain.getVersion());
 
-        // Mapping des entrées de salaires (SalaryEntries)
-        List<JobOfferSalaryJpaEntity> salaryEntities = domain.getCompensation().salaryEntries().stream().map(s -> {
-            JobOfferSalaryJpaEntity salaryEntity = new JobOfferSalaryJpaEntity();
-            salaryEntity.setJobOffer(entity);
-            salaryEntity.setType(s.type().name());
-            salaryEntity.setAmount(s.amount());
-            salaryEntity.setCurrency(s.currency());
-            return salaryEntity;
-        }).collect(Collectors.toList());
-        entity.setSalaryEntries(salaryEntities);
+        Location location = domain.getLocation();
+        if (location != null) {
+            entity.setLocationType(location.type().name());
+            Address address = location.address();
+            if (address != null) {
+                List<String> lines = address.lines();
+                entity.setAddressLine1(lines.size() > 0 ? lines.get(0) : null);
+                entity.setAddressLine2(lines.size() > 1 ? lines.get(1) : null);
+                entity.setAddressLine3(lines.size() > 2 ? lines.get(2) : null);
+                entity.setPostalCode(address.postalCode());
+                entity.setCity(address.city());
+                entity.setRegion(address.region());
+                entity.setCountryCode(address.countryCode());
+            }
+        }
 
-        // Mapping des entrées de bonus (BonusEntries)
-        List<JobOfferBonusJpaEntity> bonusEntities = domain.getCompensation().bonusEntries().stream().map(b -> {
-            JobOfferBonusJpaEntity bonusEntity = new JobOfferBonusJpaEntity();
-            bonusEntity.setJobOffer(entity);
-            bonusEntity.setType(b.type().name());
-            bonusEntity.setAmount(b.amount());
-            bonusEntity.setCurrency(b.currency());
-            return bonusEntity;
-        }).collect(Collectors.toList());
-        entity.setBonusEntries(bonusEntities);
+        Compensation compensation = domain.getCompensation();
+        if (compensation != null) {
+            entity.setSalaryEntries(compensation.salaryEntries().stream().map(s -> {
+                JobOfferSalaryJpaEntity salary = new JobOfferSalaryJpaEntity();
+                salary.setJobOffer(entity);
+                salary.setType(s.type().name());
+                salary.setAmount(s.amount());
+                salary.setCurrency(s.currency());
+                return salary;
+            }).collect(ArrayList::new, List::add, List::addAll));
+            entity.setBonusEntries(compensation.bonusEntries().stream().map(b -> {
+                JobOfferBonusJpaEntity bonus = new JobOfferBonusJpaEntity();
+                bonus.setJobOffer(entity);
+                bonus.setType(b.type().name());
+                bonus.setAmount(b.amount());
+                bonus.setCurrency(b.currency());
+                return bonus;
+            }).collect(ArrayList::new, List::add, List::addAll));
+        }
 
         return entity;
     }
 
     public static JobOffer toDomain(JobOfferJpaEntity entity) {
-        JobOfferId id = new JobOfferId(entity.getId());
-        CompanyId companyId = new CompanyId(entity.getCompanyId());
+        return JobOffer.rehydrate(
+                new JobOfferId(entity.getId()),
+                new CompanyId(entity.getCompanyId()),
+                entity.getTitle(),
+                toLocation(entity),
+                toCompensation(entity),
+                JobOfferStatus.valueOf(entity.getStatus()),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt(),
+                entity.getPublishedAt(),
+                entity.getVersion()
+        );
+    }
 
-        // Reconstruction de Location
-        Address address = null;
-        if ("CUSTOM".equals(entity.getLocationType())) {
-            List<String> lines = List.of(
-                    entity.getAddressLine1() != null ? entity.getAddressLine1() : "",
-                    entity.getAddressLine2() != null ? entity.getAddressLine2() : "",
-                    entity.getAddressLine3() != null ? entity.getAddressLine3() : ""
-            ).stream().filter(s -> !s.isBlank()).toList();
-
-            address = new Address(lines, entity.getPostalCode(), entity.getCity(), entity.getRegion(), entity.getCountryCode());
+    private static Location toLocation(JobOfferJpaEntity entity) {
+        if (entity.getLocationType() == null) {
+            return null;
         }
-        Location location = new Location(LocationType.valueOf(entity.getLocationType()), address);
+        LocationType type = LocationType.valueOf(entity.getLocationType());
+        if (type != LocationType.CUSTOM) {
+            return new Location(type, null);
+        }
+        List<String> lines = Stream.of(entity.getAddressLine1(), entity.getAddressLine2(), entity.getAddressLine3())
+                .filter(line -> line != null && !line.isBlank())
+                .toList();
+        Address address = new Address(lines, entity.getPostalCode(), entity.getCity(),
+                entity.getRegion(), entity.getCountryCode());
+        return new Location(type, address);
+    }
 
-        // Reconstruction de Compensation (Salaires & Bonus)
-        List<SalaryEntry> salaryEntries = entity.getSalaryEntries().stream()
-                .map(s -> new SalaryEntry(
-                        SalaryType.valueOf(s.getType()),
-                        s.getAmount(),
-                        s.getCurrency()
-                )).toList();
-
-        List<BonusEntry> bonusEntries = entity.getBonusEntries().stream()
-                .map(b -> new BonusEntry(
-                        BonusType.valueOf(b.getType()),
-                        b.getAmount(),
-                        b.getCurrency()
-                )).toList();
-
-        Compensation compensation = new Compensation(salaryEntries, bonusEntries);
-
-        return new JobOffer(id, companyId, entity.getTitle(), location, compensation);
+    private static Compensation toCompensation(JobOfferJpaEntity entity) {
+        List<SalaryEntry> salaries = entity.getSalaryEntries().stream()
+                .map(s -> new SalaryEntry(SalaryType.valueOf(s.getType()), s.getAmount(), s.getCurrency()))
+                .toList();
+        List<BonusEntry> bonuses = entity.getBonusEntries().stream()
+                .map(b -> new BonusEntry(BonusType.valueOf(b.getType()), b.getAmount(), b.getCurrency()))
+                .toList();
+        if (salaries.isEmpty() && bonuses.isEmpty()) {
+            return null;
+        }
+        return new Compensation(salaries, bonuses);
     }
 }
