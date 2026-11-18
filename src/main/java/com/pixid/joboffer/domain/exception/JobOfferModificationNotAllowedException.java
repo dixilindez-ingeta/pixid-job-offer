@@ -1,4 +1,4 @@
-package com.pixid.joboffer.domain.error;
+package com.pixid.joboffer.domain.exception;
 
 import com.pixid.joboffer.domain.valueobject.JobOfferStatus;
 

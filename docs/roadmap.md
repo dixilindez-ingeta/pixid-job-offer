@@ -18,6 +18,6 @@
 
 ## Etape 3 : Machine à états et logiques métier pure
 - **3.1 :** Implémenter l'agrégat `JobOffer` contenant les champs requis, les timestamps(`createdAt`, `updatedAt`, `publishedAt`) et la logique de mise à jour (autorisée uniquement en `DRAFT` ou `TO_FINALIZE`).
-- **3.2 :** Implémenter le moteur de résolution des transitions (`JobOfferStateMachine`) qui calcule l'état cible en sautant dynamiquement les états optionnels désactivés dans `CompanyConfig`.
+- **3.2 :** Implémenter le moteur de résolution des transitions (`JobOfferStateMachine`) qui calcule l'état cible en sautant dynamiquement les états optionnels désactivés dans `CompanyConfig` (qu'on a finalement décidé de traiter comme value object avec les champs `requireFinalization`, `requireApproval`, `requirePostReview`).
 - **3.3 :** Implémenter la méthode `getAvailableTransitions(CompanyConfig)` sur `JobOffer` pour calculer les actions possibles à un instant $t$.
 - **3.4 :** Écrire les tests unitaires sur la machine à états : tester le chemin nominal, chaque flag activé individuellement, les combinaisons de flags, et les transitions interdites.
