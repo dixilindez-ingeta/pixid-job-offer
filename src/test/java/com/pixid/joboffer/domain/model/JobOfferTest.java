@@ -15,7 +15,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.UUID;
 
 import static com.pixid.joboffer.domain.valueobject.JobOfferStatus.*;
 import static com.pixid.joboffer.domain.valueobject.TransitionAction.*;
@@ -38,17 +37,17 @@ class JobOfferTest {
             List.of(new SalaryEntry(SalaryType.MONTHLY, new BigDecimal("2500"), "EUR")), List.of());
 
     private static JobOffer completeDraft(CompanyConfig config) {
-        return JobOffer.createDraft(JobOfferId.generate(), new CompanyId(UUID.randomUUID()),
+        return JobOffer.createDraft(JobOfferId.generate(), CompanyId.generate(),
                 "Développeur Java", LOCATION, COMPENSATION, config, CLOCK_T0);
     }
 
     private static JobOffer emptyDraft() {
-        return JobOffer.createDraft(JobOfferId.generate(), new CompanyId(UUID.randomUUID()),
+        return JobOffer.createDraft(JobOfferId.generate(), CompanyId.generate(),
                 null, null, null, PARTIAL_ONLY, CLOCK_T0);
     }
 
     private static JobOffer inStatus(JobOfferStatus status) {
-        return JobOffer.rehydrate(JobOfferId.generate(), new CompanyId(UUID.randomUUID()), "Titre",
+        return JobOffer.rehydrate(JobOfferId.generate(), CompanyId.generate(), "Titre",
                 LOCATION, COMPENSATION, status, T0, T0, null, 3L);
     }
 
@@ -56,7 +55,7 @@ class JobOfferTest {
     @DisplayName("rehydrate restaure l'état tel quel, sans validation")
     void rehydrateRestoresStateWithoutValidation() {
         JobOfferId id = JobOfferId.generate();
-        CompanyId companyId = new CompanyId(UUID.randomUUID());
+        CompanyId companyId = CompanyId.generate();
 
         JobOffer offer = JobOffer.rehydrate(id, companyId, null, null, null, PUBLISHED, T0, T1, T1, 7L);
 
@@ -97,7 +96,7 @@ class JobOfferTest {
         @Test
         @DisplayName("Données partielles refusées si partialSaveEnabled est désactivé")
         void partialDraftRejectedWhenPartialSaveDisabled() {
-            assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), new CompanyId(UUID.randomUUID()),
+            assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), CompanyId.generate(),
                     "Titre", null, null, ALL_DISABLED, CLOCK_T0))
                     .isInstanceOf(DomainValidationException.class)
                     .hasMessageContaining("location")
@@ -107,7 +106,7 @@ class JobOfferTest {
         @Test
         @DisplayName("Un titre vide compte comme manquant")
         void blankTitleIsMissing() {
-            assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), new CompanyId(UUID.randomUUID()),
+            assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), CompanyId.generate(),
                     "  ", LOCATION, COMPENSATION, ALL_DISABLED, CLOCK_T0))
                     .isInstanceOf(DomainValidationException.class)
                     .hasMessageContaining("title");
@@ -116,7 +115,7 @@ class JobOfferTest {
         @Test
         @DisplayName("Le titre est limité à 200 caractères, même en enregistrement partiel")
         void titleMaxLength() {
-            assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), new CompanyId(UUID.randomUUID()),
+            assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), CompanyId.generate(),
                     "x".repeat(201), null, null, PARTIAL_ONLY, CLOCK_T0))
                     .isInstanceOf(DomainValidationException.class);
         }
@@ -124,7 +123,7 @@ class JobOfferTest {
         @Test
         @DisplayName("Identifiants obligatoires")
         void idsAreRequired() {
-            assertThatThrownBy(() -> JobOffer.createDraft(null, new CompanyId(UUID.randomUUID()),
+            assertThatThrownBy(() -> JobOffer.createDraft(null, CompanyId.generate(),
                     null, null, null, PARTIAL_ONLY, CLOCK_T0))
                     .isInstanceOf(DomainValidationException.class);
             assertThatThrownBy(() -> JobOffer.createDraft(JobOfferId.generate(), null,

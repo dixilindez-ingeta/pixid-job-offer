@@ -9,4 +9,6 @@ public interface JobOfferRepository {
     JobOffer save(JobOffer jobOffer);
 
     Optional<JobOffer> findById(JobOfferId id);
+
+    PageResult<JobOffer> search(JobOfferSearchCriteria criteria, PageRequest pageRequest);
 }

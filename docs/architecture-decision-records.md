@@ -23,16 +23,27 @@ Ce fichier documente les décisions architecturales structurales prises lors du 
 
 ↓
 
-`application (Use case : UseCase Handlers, Command/Queries, Ports,...)`
+`application (Use cases transactionnels : CreateJobOffer, TransitionJobOffer,..., Commands, JobOfferDetails)`
 
 ↓
 
-`domain (Core business : Aggregate, State Machine, Value Objects,...)`
+`domain (Core business : Aggregate, State Machine, Value Objects, Ports : JobOfferRepository, CompanyConfigProvider,...)`
 </div>
+
+Précisions :
+
+- Les **ports** (`JobOfferRepository`, `CompanyConfigProvider`) et leurs types neutres de recherche
+  (`JobOfferSearchCriteria`, `PageRequest`, `PageResult<T>`) sont définis dans `domain/port` : ce sont des contrats
+  exprimés dans le langage du domaine, implémentés par `infrastructure`.
+- La couche `application` porte les use cases et la frontière transactionnelle : Spring y est **autorisé** de façon
+  limitée (`@Service`, `@Transactional`) par pragmatisme, alors qu'il reste **interdit** dans `domain`. Les use cases
+  sont testés unitairement avec des implémentations en mémoire des ports.
+- Les adaptateurs de persistance déclarent leur propre `@Transactional` (qui rejoint celle du use case si elle existe)
+  afin que le mapping JPA → domaine se fasse toujours dans une session ouverte (`open-in-view: false`).
 
 - ### Conséquences :
   - #### Positives :
-    - Le métier (application+domain) ne dépend pas de la technologie (spring)
+    - Le domaine ne dépend d'aucune technologie (Spring, JPA,... : vérifié par ArchUnit)
     - Testabilité unitaire instantanée et exhaustive du moteur d'états sans démarrage du moteur Spring
     - Evolution facilitée (ex : Ajout d'un adaptateur Kafka pour publier des évènements sans toucher au domaine,...)
   - #### Négatives :

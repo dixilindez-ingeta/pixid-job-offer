@@ -8,4 +8,8 @@ public record CompanyId(UUID value) {
     public CompanyId {
         Guard.notNull(value, "CompanyId cannot be null");
     }
+
+    public static CompanyId generate() {
+        return new CompanyId(UUID.randomUUID());
+    }
 }

@@ -5,6 +5,7 @@ import com.pixid.joboffer.domain.valueobject.CompanyConfig;
 import com.pixid.joboffer.domain.valueobject.CompanyId;
 import com.pixid.joboffer.infrastructure.persistence.entity.CompanyConfigJpaEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class PostgresCompanyConfigAdapter implements CompanyConfigProvider {
@@ -24,6 +25,7 @@ public class PostgresCompanyConfigAdapter implements CompanyConfigProvider {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CompanyConfig findByCompanyId(CompanyId companyId) {
         return jpaRepository.findById(companyId.value())
                 .map(PostgresCompanyConfigAdapter::toDomain)
@@ -31,6 +33,7 @@ public class PostgresCompanyConfigAdapter implements CompanyConfigProvider {
     }
 
     @Override
+    @Transactional
     public CompanyConfig save(CompanyId companyId, CompanyConfig config) {
         CompanyConfigJpaEntity entity = jpaRepository.findById(companyId.value())
                 .orElseGet(() -> {

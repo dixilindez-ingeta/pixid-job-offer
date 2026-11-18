@@ -39,10 +39,15 @@
 - **4.3 :** Implémentation du Port du domaine `CompanyConfigProvider` (`findByCompanyId` renvoie
   `CompanyConfig.defaults()` si absente, `save`).
 - **4.4 :** Implémentation des mappers entre entités JPA et objets du domaine (`JobOffer`, `CompanyConfig`).
-- **4.5 :** Tests d'intégration de la persistance (Testcontainers + `@ServiceConnection` ; `contextLoads` réactivé).
+- **4.5 :** Tests d'intégration de la persistance (Testcontainers + `@ServiceConnection` ; `contextLoads` réactivé ;
+  aller-retour, mise à jour des collections, verrou optimiste, recherche filtrée/paginée/triée).
 
 # Etape 5 : Exposition API et UseCase (Couche application)
-- **5.1 :** Implémentation des cas d'utilisation (Use Cases / Command Handlers).
+
+- **5.1 :** Implémentation des cas d'utilisation transactionnels (`CreateJobOffer`, `UpdateJobOffer`,
+  `TransitionJobOffer`, `GetJobOffer`, `SearchJobOffers`, `GetCompanyConfig`, `UpdateCompanyConfig`) et de la recherche
+  paginée/triée via le port `JobOfferRepository.search` (Spring Data `Specification`, tri `createdAt`/`updatedAt`/
+  `publishedAt`, taille de page ≤ 100).
 - **5.2 :** Exposition des contrôleurs REST Spring MVC.
 - **5.3 :** Documentation OpenAPI / Swagger (springdoc).
 
