@@ -54,7 +54,7 @@ Créer des classes distinctes pour la persistance(dans infrastructure/persistenc
 
 
 
-# ADR-03 : Résolution Dynamique des Sauts d'États dans un Service de Domaine
+# ADR-03 : Résolution dynamique des sauts d'états dans un service de domaine
 
 - ### Statut : Accepté
 
@@ -62,11 +62,13 @@ Créer des classes distinctes pour la persistance(dans infrastructure/persistenc
 Une offre d'emploi traverse jusqu'à 6 états, dont 3 optionnels(`TO_FINALIZE`, `TO_APPROVE`, `TO_POST`) selon la configuration de l'entreprise. De plus, l'API doit exposer dynamiquement les transitions disponibles (`availableTransitions`).
 
 - ### Décision : 
-Centraliser l'algorithme de calcul des transitions et de résolution de l'état cible dans une classe dédiée du domaine (`JobOfferStateMachine`) prenant en entrée l'état courant de l'offre et la `CompanyConfig`.
+  - Centraliser l'algorithme de calcul des transitions et de résolution de l'état cible dans une classe dédiée du domaine (`JobOfferStateMachine`).
+  - Cet algo saute automatiquement les étapes désactivées jusqu'à atteindre la prochaine étape requise ou l'état PUBLISHED.
+  - L'agrégat `JobOffer` expose également `getAvailableTransitions(CompanyConfig)` pour permettre aux consommateurs (API, IHM) de connaître les actions légitimes à un instant $t$.
 
 - ### Conséquences :
   - #### Positives : 
-  Élimination complète de la duplication de conditions(`if/else`) entre les contrôleurs REST, les cas d'utilisation et les validations; ajout aisé d'un nouvel état optionnel dans le futur.
+  Élimination complète de la duplication de conditions(`if/else`) entre les contrôleurs REST, les cas d'utilisation et les validations; ajout aisé d'un nouvel état optionnel dans le futur; Les règles de transition sont hautement testables unitairement sans nécessiter de contexte Spring ni de base de données.
   - #### Négatives : 
   Nécessite de toujours charger la CompanyConfig (ou ses valeurs par défaut) lors d'une lecture unitaire ou d'une transition d'offre.
 
@@ -88,3 +90,4 @@ Exposer un endpoint dédié orienté commande `POST /api/v1/job-offers/{id}/tran
   Sémantique REST claire et explicite ; séparation nette entre la modification du contenu de l'offre (autorisée uniquement en `DRAFT/TO_FINALIZE`) et l'avancement dans le workflow; gestion fine des erreurs de transition(`400 Bad Request` / `409 Conflict`).
   - #### Négatives : 
   Un endpoint supplémentaire à documenter dans OpenAPI.
+

@@ -21,3 +21,18 @@
 - **3.2 :** Implémenter le moteur de résolution des transitions (`JobOfferStateMachine`) qui calcule l'état cible en sautant dynamiquement les états optionnels désactivés dans `CompanyConfig` (qu'on a finalement décidé de traiter comme value object avec les champs `requireFinalization`, `requireApproval`, `requirePostReview`).
 - **3.3 :** Implémenter la méthode `getAvailableTransitions(CompanyConfig)` sur `JobOffer` pour calculer les actions possibles à un instant $t$.
 - **3.4 :** Écrire les tests unitaires sur la machine à états : tester le chemin nominal, chaque flag activé individuellement, les combinaisons de flags, et les transitions interdites.
+
+# Etape 4 : Ports, adaptateurs et persistance
+- **4.1 :** Définition des scripts de migration Flyway (`V1__init_schema.sql incluant les tables et les colonnes de configuration des entreprises).
+- **4.2 :** Création des entités JPA techniques dans la couche infrastructure.
+- **4.3 :** Implémentation du Port du domaine (`CompanyConfigProvider` ou `CompanyRepository`) pour découpler la persistance du Value Object.
+- **4.4 :** Implémentation des mappers entre entités JPA et objets du domaine (`JobOffer`, `CompanyConfig`).
+- **4.5 :** Tests d'intégration de la persistance.
+
+# Etape 5 : Exposition API et UseCase (Couche application)
+- **5.1 :** Implémentation des cas d'utilisation (Use Cases / Command Handlers).
+- **5.2 :** Exposition des contrôleurs REST Spring MVC.
+- **5.3 :** Documentation OpenAPI / Swagger (springdoc).
+
+# Etape 6 : Gardiens architecturaux et aualité
+- **6.1 :** Règles ArchUnit strictes pour valider l'architecture en oignon (isolation totale du domaine, interdiction des dépendances Spring/JPA dans domain).
