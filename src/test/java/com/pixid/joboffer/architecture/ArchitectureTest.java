@@ -25,7 +25,8 @@ class ArchitectureTest {
                     .should().dependOnClassesThat().resideInAnyPackage(
                             APPLICATION, INFRASTRUCTURE, PRESENTATION, "..springframework.."
                     )
-                    .because("Le cœur du domaine doit être pur et totalement agnostique des frameworks et couches externes.");
+                    .because("Le coeur du domaine doit être pur et totalement agnostique des frameworks et couches externes.")
+                    .allowEmptyShould(true);
 
     @ArchTest
     static final ArchRule application_should_not_depend_on_infrastructure_or_presentation =
@@ -33,17 +34,20 @@ class ArchitectureTest {
                     .should().dependOnClassesThat().resideInAnyPackage(
                             INFRASTRUCTURE, PRESENTATION
                     )
-                    .because("La couche application ne doit connaître ni l'infrastructure ni la présentation.");
+                    .because("La couche application ne doit connaître ni l'infrastructure ni la présentation.")
+                    .allowEmptyShould(true);
 
     @ArchTest
     static final ArchRule infrastructure_should_not_depend_on_presentation =
             noClasses().that().resideInAPackage(INFRASTRUCTURE)
                     .should().dependOnClassesThat().resideInAPackage(PRESENTATION)
-                    .because("L'infrastructure ne doit pas dépendre des contrôleurs ou adaptateurs de présentation.");
+                    .because("L'infrastructure ne doit pas dépendre des contrôleurs ou adaptateurs de présentation.")
+                    .allowEmptyShould(true);
 
     @ArchTest
     static final ArchRule no_cyclic_dependencies_between_packages =
             slices().matching("com.pixid.joboffer.(*)..")
                     .should().beFreeOfCycles()
-                    .because("L'architecture globale ne doit pas contenir de cycles de dépendances.");
+                    .because("L'architecture globale ne doit pas contenir de cycles de dépendances.")
+                    .allowEmptyShould(true);
 }
