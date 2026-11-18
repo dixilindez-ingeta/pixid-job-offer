@@ -1,1 +1,2 @@
-package com.pixid.joboffer.infrastructure;
+package com.pixid.joboffer.infrastructure
+;

@@ -91,3 +91,32 @@ Exposer un endpoint dédié orienté commande `POST /api/v1/job-offers/{id}/tran
   - #### Négatives : 
   Un endpoint supplémentaire à documenter dans OpenAPI.
 
+# ADR-05 : Schéma de persistance (UUID natifs, pas de FK vers la configuration, verrou optimiste)
+
+- ### Statut : Accepté
+
+- ### Contexte :
+
+`companyId` référence une entreprise gérée par un service Company **externe**. La table `company_configs` ne contient
+que les entreprises ayant explicitement personnalisé leur configuration. Par ailleurs, une offre peut être enregistrée
+incomplète (`partialSaveEnabled`) et peut être modifiée en concurrence par plusieurs recruteurs.
+
+- ### Décision :
+  - Identifiants stockés en type natif PostgreSQL `UUID`.
+  - **Aucune clé étrangère** `job_offers.company_id → company_configs` : une entreprise sans ligne de configuration
+    utilise `CompanyConfig.defaults()` (tous les paramètres à `false`), renvoyé par l'adaptateur.
+  - Paramètres `approval_required`, `partial_save_enabled`, `manual_posting_required` en
+    `BOOLEAN NOT NULL DEFAULT FALSE`.
+  - `title` et `location_type` nullables : la complétude est une règle **métier** vérifiée par le domaine lors des
+    transitions, pas une contrainte SQL.
+  - Colonne `version` + `@Version` JPA (verrouillage optimiste) ; un conflit sera traduit en `409 Conflict` par l'API.
+  - Index `(company_id, status, created_at DESC)` et `(status, created_at DESC)` pour les listes filtrées/triées, index
+    sur `job_offer_id` des tables enfants ; `hibernate.default_batch_fetch_size` pour éviter le N+1 sur salaires/bonus.
+
+- ### Conséquences :
+  - #### Positives :
+  Aucun couplage d'intégrité avec un service externe ; création d'offre possible sans configuration préalable ; requêtes
+  de liste servies par index ; perte de mises à jour concurrentes détectée.
+  - #### Négatives :
+  L'existence de l'entreprise n'est pas garantie par la base (à valider côté Company si nécessaire) ; les invariants de
+  complétude reposent entièrement sur le domaine.
