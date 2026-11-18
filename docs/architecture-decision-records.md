@@ -13,6 +13,8 @@ Ce fichier documente les décisions architecturales structurales prises lors du 
   - `infrastructure`
   - `présentation`
 
+<div align="center">
+
 `présentation (API REST: Controllers, DTOs REST...)`
 
 ↓
@@ -26,7 +28,7 @@ Ce fichier documente les décisions architecturales structurales prises lors du 
 ↓
 
 `domain (Core business : Aggregate, State Machine, Value Objects,...)`
-
+</div>
 
 - ### Conséquences :
   - #### Positives :
@@ -46,6 +48,43 @@ Créer des classes distinctes pour la persistance(dans infrastructure/persistenc
 
 - ### Conséquences :
   - #### Positives :
-    - Le schéma de BDD peut être optimisé indépendemment de la structure objet métier. Le modèle de domaine garantit ses invariants à la construction et à chaque invariant.
+  Le schéma de BDD peut être optimisé indépendemment de la structure objet métier. Le modèle de domaine garantit ses invariants à la construction et à chaque invariant.
   - #### Négatives :
-    - Classes de mapping nécessaires
+  Classes de mapping nécessaires
+
+
+
+# ADR-03 : Résolution Dynamique des Sauts d'États dans un Service de Domaine
+
+- ### Statut : Accepté
+
+- ### Contexte : 
+Une offre d'emploi traverse jusqu'à 6 états, dont 3 optionnels(`TO_FINALIZE`, `TO_APPROVE`, `TO_POST`) selon la configuration de l'entreprise. De plus, l'API doit exposer dynamiquement les transitions disponibles (`availableTransitions`).
+
+- ### Décision : 
+Centraliser l'algorithme de calcul des transitions et de résolution de l'état cible dans une classe dédiée du domaine (`JobOfferStateMachine`) prenant en entrée l'état courant de l'offre et la `CompanyConfig`.
+
+- ### Conséquences :
+  - #### Positives : 
+  Élimination complète de la duplication de conditions(`if/else`) entre les contrôleurs REST, les cas d'utilisation et les validations; ajout aisé d'un nouvel état optionnel dans le futur.
+  - #### Négatives : 
+  Nécessite de toujours charger la CompanyConfig (ou ses valeurs par défaut) lors d'une lecture unitaire ou d'une transition d'offre.
+
+
+
+
+# ADR-04 : Modélisation des Transitions via une Ressource dédiée (POST /transitions)
+
+- ### Statut : Accepté
+
+- ### Contexte : 
+Les changements d'état d'une offre(`submit`, `approve`, `reject`, `post`, `close`, `expire`) déclenchent des règles de validation spécifiques et des effets de bord (ex: valorisation de `publishedAt`), contrairement à une simple mise à jour de champs (`PUT`).
+
+- ### Décision : 
+Exposer un endpoint dédié orienté commande `POST /api/v1/job-offers/{id}/transitions` recevant l'action demandée (ex: `{"action": "APPROVE"}`), plutôt que d'autoriser la modification directe du champ status via `PUT` ou `PATCH`.
+
+- ### Conséquences :
+  - #### Positives : 
+  Sémantique REST claire et explicite ; séparation nette entre la modification du contenu de l'offre (autorisée uniquement en `DRAFT/TO_FINALIZE`) et l'avancement dans le workflow; gestion fine des erreurs de transition(`400 Bad Request` / `409 Conflict`).
+  - #### Négatives : 
+  Un endpoint supplémentaire à documenter dans OpenAPI.
