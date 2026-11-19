@@ -59,7 +59,12 @@ comprend :
 
 - les règles d'architecture (ArchUnit) ;
 - les tests unitaires du domaine et des use cases ;
-- les tests d'intégration de la persistance.
+- les tests d'intégration de la persistance (`PostgresJobOfferRepositoryAdapterTest`) ;
+- les tests d'intégration de l'API (`JobOfferApiTest`, MockMvc sur l'application complète) :
+  parcours complets selon la configuration de l'entreprise,
+  recherche, erreurs 400 / 404 / 409.
+
+Les tests `@SpringBootTest` partagent un même contexte Spring, donc un seul conteneur PostgreSQL pour toute la suite.
 
 ## Documentation de l'API
 

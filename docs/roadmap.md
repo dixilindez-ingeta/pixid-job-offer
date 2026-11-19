@@ -55,3 +55,6 @@
 
 # Etape 6 : Gardiens architecturaux et aualité
 - **6.1 :** Règles ArchUnit strictes pour valider l'architecture en oignon (isolation totale du domaine, interdiction des dépendances Spring/JPA dans domain).
+- **6.2 :** Tests d'intégration de l'API (`JobOfferApiTest` : `@SpringBootTest` + MockMvc + Testcontainers) : parcours
+  complet avec la configuration par défaut (publication directe) et tout activé (toutes les étapes, `REJECT`), recherche
+  filtrée/paginée/triée, contrat d'erreur RFC 9457 (400 / 404 / 409), configuration entreprise.
