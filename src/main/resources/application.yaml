@@ -17,6 +17,9 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 50
+  web:
+    locale: en
+    locale-resolver: fixed
   flyway:
     enabled: true
     baseline-on-migrate: true

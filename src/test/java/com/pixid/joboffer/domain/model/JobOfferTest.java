@@ -1,8 +1,9 @@
 package com.pixid.joboffer.domain.model;
 
-import com.pixid.joboffer.domain.exception.DomainValidationException;
-import com.pixid.joboffer.domain.exception.InvalidStateTransitionException;
-import com.pixid.joboffer.domain.exception.JobOfferModificationNotAllowedException;
+import com.pixid.joboffer.domain.error.DomainValidationException;
+import com.pixid.joboffer.domain.error.IncompleteJobOfferException;
+import com.pixid.joboffer.domain.error.InvalidStateTransitionException;
+import com.pixid.joboffer.domain.error.JobOfferModificationNotAllowedException;
 import com.pixid.joboffer.domain.valueobject.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -232,8 +233,8 @@ class JobOfferTest {
             offer.apply(SUBMIT, PARTIAL_ONLY, CLOCK_T0);
 
             assertThatThrownBy(() -> offer.apply(FINALIZE, PARTIAL_ONLY, CLOCK_T1))
-                    .isInstanceOf(DomainValidationException.class)
-                    .hasMessageContaining("title");
+                    .isInstanceOfSatisfying(IncompleteJobOfferException.class, e -> assertThat(e.getMissingFields())
+                            .containsExactly("title", "location", "compensation"));
             assertThat(offer.getStatus()).isEqualTo(TO_FINALIZE);
 
             offer.update("Titre", LOCATION, COMPENSATION, CLOCK_T1);
@@ -247,7 +248,7 @@ class JobOfferTest {
             JobOffer offer = emptyDraft();
 
             assertThatThrownBy(() -> offer.apply(SUBMIT, ALL_DISABLED, CLOCK_T1))
-                    .isInstanceOf(DomainValidationException.class);
+                    .isInstanceOf(IncompleteJobOfferException.class);
             assertThat(offer.getStatus()).isEqualTo(DRAFT);
         }
 

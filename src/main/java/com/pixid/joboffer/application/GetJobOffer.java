@@ -1,6 +1,6 @@
 package com.pixid.joboffer.application;
 
-import com.pixid.joboffer.domain.exception.ResourceNotFoundException;
+import com.pixid.joboffer.domain.error.ResourceNotFoundException;
 import com.pixid.joboffer.domain.model.JobOffer;
 import com.pixid.joboffer.domain.port.CompanyConfigProvider;
 import com.pixid.joboffer.domain.port.JobOfferRepository;

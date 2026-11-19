@@ -1,7 +1,8 @@
 package com.pixid.joboffer.domain.model;
 
-import com.pixid.joboffer.domain.exception.DomainValidationException;
-import com.pixid.joboffer.domain.exception.JobOfferModificationNotAllowedException;
+import com.pixid.joboffer.domain.error.DomainValidationException;
+import com.pixid.joboffer.domain.error.IncompleteJobOfferException;
+import com.pixid.joboffer.domain.error.JobOfferModificationNotAllowedException;
 import com.pixid.joboffer.domain.validator.Guard;
 import com.pixid.joboffer.domain.valueobject.*;
 
@@ -46,7 +47,10 @@ public class JobOffer {
         validateTitle(title);
 
         if (!config.partialSaveEnabled()) {
-            ensureComplete(title, location, compensation);
+            List<String> missing = missingFields(title, location, compensation);
+            if (!missing.isEmpty()) {
+                throw new DomainValidationException("Job offer is incomplete, missing: " + String.join(", ", missing));
+            }
         }
         Instant now = clock.instant();
         return new JobOffer(id, companyId, title, location, compensation,
@@ -64,13 +68,6 @@ public class JobOffer {
     private static boolean requiresCompleteness(TransitionAction action, JobOfferStatus target) {
         return (action == TransitionAction.SUBMIT || action == TransitionAction.FINALIZE)
                 && target != JobOfferStatus.TO_FINALIZE;
-    }
-
-    private static void ensureComplete(String title, Location location, Compensation compensation) {
-        List<String> missing = missingFields(title, location, compensation);
-        if (!missing.isEmpty()) {
-            throw new DomainValidationException("Job offer is incomplete, missing: " + String.join(", ", missing));
-        }
     }
 
     private static List<String> missingFields(String title, Location location, Compensation compensation) {
@@ -108,7 +105,10 @@ public class JobOffer {
         Guard.notNull(config, "Company config is required");
         JobOfferStatus target = JobOfferStateMachine.targetStatus(status, action, config);
         if (requiresCompleteness(action, target)) {
-            ensureComplete(title, location, compensation);
+            List<String> missing = missingFields(title, location, compensation);
+            if (!missing.isEmpty()) {
+                throw new IncompleteJobOfferException(missing);
+            }
         }
         Instant now = clock.instant();
         this.status = target;

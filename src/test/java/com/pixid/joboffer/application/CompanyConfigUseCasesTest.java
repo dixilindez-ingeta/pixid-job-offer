@@ -1,6 +1,6 @@
 package com.pixid.joboffer.application;
 
-import com.pixid.joboffer.domain.exception.DomainValidationException;
+import com.pixid.joboffer.domain.error.DomainValidationException;
 import com.pixid.joboffer.domain.valueobject.CompanyConfig;
 import com.pixid.joboffer.domain.valueobject.CompanyId;
 import org.junit.jupiter.api.DisplayName;

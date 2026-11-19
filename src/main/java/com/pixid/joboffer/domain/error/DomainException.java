@@ -1,4 +1,4 @@
-package com.pixid.joboffer.domain.exception;
+package com.pixid.joboffer.domain.error;
 
 public abstract class DomainException extends RuntimeException {
     private static final long serialVersionUID = 1L;

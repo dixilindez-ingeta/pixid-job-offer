@@ -174,3 +174,37 @@ ailleurs, les dates (`createdAt`, `updatedAt`, `publishedAt`) doivent être test
   - #### Négatives :
   Une offre rejetée perd son avancement (elle repasse par toutes les étapes) ; la `Clock` doit être transmise par la
   couche application à chaque commande.
+
+# ADR-07 : Erreurs HTTP au format Problem Details (RFC 9457)
+
+- ### Statut : Accepté
+
+- ### Contexte :
+
+L'API est consommée par plusieurs clients (back-office, job board, services internes). Ils ont besoin d'un format
+d'erreur unique et exploitable par programme, et d'une sémantique HTTP cohérente entre « requête invalide » et « action
+impossible dans l'état actuel de la ressource ».
+
+- ### Décision :
+  - Toutes les erreurs sont renvoyées en `application/problem+json` (`ProblemDetail` de Spring, centralisé dans un
+    `@RestControllerAdvice`).
+  - **400** : la requête elle-même est invalide. Cela couvre Bean Validation et les paramètres (`errors` : liste
+    `{field, message}`), le JSON mal formé ou une valeur d'enum inconnue (valeurs acceptées indiquées), les règles des
+    value objects (devise ISO 4217, pays ISO 3166-1…), et une création incomplète sans `partialSaveEnabled`.
+  - **404** : offre introuvable.
+  - **409** : la requête est valide, mais **l'état de la ressource** empêche l'opération. Cela couvre une action non
+    autorisée depuis le statut courant, une modification hors `DRAFT`/`TO_FINALIZE`, une offre incomplète pour `SUBMIT`/
+    `FINALIZE` (`IncompleteJobOfferException`, champ `missingFields`) et un conflit de version
+    (`OptimisticLockingFailureException`).
+  - Les messages de validation sont en anglais quelle que soit la locale du serveur (`spring.web.locale: en`, résolveur
+    fixe).
+  - Toute autre exception donne un **500** générique, sans détail technique (journalisé côté serveur).
+
+- ### Conséquences :
+  - #### Positives :
+  Un seul format d'erreur à gérer côté client. Le 409 indique clairement qu'il faut d'abord modifier l'offre ou la
+  recharger, pas corriger la requête. Les champs `errors` et `missingFields` permettent d'afficher les erreurs au bon
+  endroit dans un formulaire.
+  - #### Négatives :
+  La distinction 400/409 pour une offre incomplète (création vs transition) doit être comprise des clients ; elle est
+  documentée dans OpenAPI et le README.

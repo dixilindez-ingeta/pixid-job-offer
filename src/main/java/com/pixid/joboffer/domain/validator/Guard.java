@@ -1,6 +1,6 @@
 package com.pixid.joboffer.domain.validator;
 
-import com.pixid.joboffer.domain.exception.DomainValidationException;
+import com.pixid.joboffer.domain.error.DomainValidationException;
 
 import java.math.BigDecimal;
 import java.util.Currency;

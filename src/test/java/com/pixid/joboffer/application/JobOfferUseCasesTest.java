@@ -1,9 +1,9 @@
 package com.pixid.joboffer.application;
 
-import com.pixid.joboffer.domain.exception.DomainValidationException;
-import com.pixid.joboffer.domain.exception.InvalidStateTransitionException;
-import com.pixid.joboffer.domain.exception.JobOfferModificationNotAllowedException;
-import com.pixid.joboffer.domain.exception.ResourceNotFoundException;
+import com.pixid.joboffer.domain.error.DomainValidationException;
+import com.pixid.joboffer.domain.error.InvalidStateTransitionException;
+import com.pixid.joboffer.domain.error.JobOfferModificationNotAllowedException;
+import com.pixid.joboffer.domain.error.ResourceNotFoundException;
 import com.pixid.joboffer.domain.model.JobOffer;
 import com.pixid.joboffer.domain.port.JobOfferSearchCriteria;
 import com.pixid.joboffer.domain.port.PageRequest;

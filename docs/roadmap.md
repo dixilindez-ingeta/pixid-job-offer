@@ -48,8 +48,10 @@
   `TransitionJobOffer`, `GetJobOffer`, `SearchJobOffers`, `GetCompanyConfig`, `UpdateCompanyConfig`) et de la recherche
   paginée/triée via le port `JobOfferRepository.search` (Spring Data `Specification`, tri `createdAt`/`updatedAt`/
   `publishedAt`, taille de page ≤ 100).
-- **5.2 :** Exposition des contrôleurs REST Spring MVC.
-- **5.3 :** Documentation OpenAPI / Swagger (springdoc).
+- **5.2 :** Exposition des contrôleurs REST Spring MVC (`/api/v1/job-offers`, `/transitions`,
+  `/api/v1/companies/{companyId}/config`), DTOs en records avec Bean Validation, erreurs RFC 9457 (ADR-07).
+- **5.3 :** Documentation OpenAPI / Swagger (springdoc : `@Tag`, `@Operation`, réponses d'erreur, exemples) et README
+  (lancement, endpoints, exemples curl, erreurs).
 
 # Etape 6 : Gardiens architecturaux et aualité
 - **6.1 :** Règles ArchUnit strictes pour valider l'architecture en oignon (isolation totale du domaine, interdiction des dépendances Spring/JPA dans domain).

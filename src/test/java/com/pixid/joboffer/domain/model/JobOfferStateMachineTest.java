@@ -1,6 +1,6 @@
 package com.pixid.joboffer.domain.model;
 
-import com.pixid.joboffer.domain.exception.InvalidStateTransitionException;
+import com.pixid.joboffer.domain.error.InvalidStateTransitionException;
 import com.pixid.joboffer.domain.valueobject.CompanyConfig;
 import com.pixid.joboffer.domain.valueobject.JobOfferStatus;
 import com.pixid.joboffer.domain.valueobject.TransitionAction;
