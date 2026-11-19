@@ -16,5 +16,22 @@ services:
       timeout: 3s
       retries: 10
 
+  app:
+    build: .
+    container_name: job-offer-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/job_offer
+      SPRING_DATASOURCE_USERNAME: super_jobber
+      SPRING_DATASOURCE_PASSWORD: my_secret
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    ports:
+      - "8486:8486"
+    labels:
+      # ./mvnw spring-boot:run must not create a service connection for this container
+      org.springframework.boot.ignore: "true"
+
 volumes:
   postgres_data:

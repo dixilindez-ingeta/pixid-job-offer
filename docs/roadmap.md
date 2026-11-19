@@ -58,3 +58,10 @@
 - **6.2 :** Tests d'intégration de l'API (`JobOfferApiTest` : `@SpringBootTest` + MockMvc + Testcontainers) : parcours
   complet avec la configuration par défaut (publication directe) et tout activé (toutes les étapes, `REJECT`), recherche
   filtrée/paginée/triée, contrat d'erreur RFC 9457 (400 / 404 / 409), configuration entreprise.
+
+# Etape 7 : Livraison
+
+- **7.1 :** `Dockerfile` multi-stage (JDK 25 → JRE 25, jar en couches, utilisateur non root) et service `app` dans
+  `compose.yml` (dépend de `postgres` healthy, datasource par variables d'environnement) — ADR-08.
+- **7.2 :** Mode développement : `spring-boot-docker-compose` limité au service `postgres`.
+- **7.3 :** README : lancement en conteneurs (`docker compose up --build`) et en mode développement.

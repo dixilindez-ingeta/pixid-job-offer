@@ -170,6 +170,17 @@ class JobOfferApiTest {
         }
     }
 
+    @Test
+    @DisplayName("localisation à l'adresse de l'entreprise : aucune adresse requise")
+    void companyAddressLocation() throws Exception {
+        create("""
+                {"companyId":"%s","title":"Cariste H/F","location":{"type":"COMPANY_ADDRESS"},"compensation":%s}"""
+                .formatted(companyId, COMPENSATION))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.location.type").value("COMPANY_ADDRESS"))
+                .andExpect(jsonPath("$.location.address").value(nullValue()));
+    }
+
     @Nested
     @DisplayName("Recherche")
     class Search {

@@ -7,24 +7,38 @@ Stack : Java 25, Spring Boot 4.1, PostgreSQL 17, Spring Data JPA, Flyway, spring
 
 ## Prérequis
 
-- **Java 25** (JDK)
-- **Docker** (Docker Desktop, OrbStack…), utilisé pour la base PostgreSQL et pour les tests d'intégration
+- **Docker** (Docker Desktop, OrbStack…) avec Docker Compose v2 : suffit pour lancer l'application en conteneurs
+- **Java 25** (JDK) : uniquement pour le mode développement et les tests
 - Maven n'est pas nécessaire : le wrapper `./mvnw` est fourni
 
 ## Lancer l'application
+
+### En conteneurs (application + base)
+
+```bash
+docker compose up --build
+```
+
+- Le `Dockerfile` multi-stage compile l'application (JDK 25, Maven) puis la lance dans une image JRE 25, avec un
+  utilisateur non root. Les tests ne sont pas exécutés pendant la construction de l'image, car ils ont besoin de Docker
+  (Testcontainers) : ils se lancent avec `./mvnw verify`.
+- Le service `app` attend que `postgres` soit *healthy*, puis applique les migrations Flyway au démarrage.
+- L'API écoute sur **http://localhost:8486**, PostgreSQL sur `localhost:5434`.
+- Arrêt : `docker compose down` (ajouter `-v` pour supprimer aussi les données).
+
+### En mode développement
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-- Grâce à `spring-boot-docker-compose`, le conteneur PostgreSQL défini dans `compose.yml` est **démarré
-  automatiquement**. Il est exposé sur `localhost:5434`, base `job_offer`, utilisateur `super_jobber`.
+- Grâce à `spring-boot-docker-compose`, seul le service `postgres` de `compose.yml` est **démarré automatiquement**
+  (`spring.docker.compose.start.arguments: postgres`), l'application tourne sur la machine. Il est exposé sur
+  `localhost:5434`, base `job_offer`, utilisateur `super_jobber`.
 - Les migrations Flyway (`src/main/resources/db/migration`) sont appliquées au démarrage, puis Hibernate valide le
   schéma (`ddl-auto: validate`).
-- L'API écoute sur **http://localhost:8486**.
-
-> Le lancement complet en conteneurs (`docker compose up --build`, application + base) sera ajouté à l'étape F
-> (Dockerfile).
+- L'API écoute sur **http://localhost:8486**. Si le conteneur `job-offer-app` tourne déjà (lancement en conteneurs), le
+  port est occupé : l'arrêter d'abord avec `docker compose stop app`.
 
 ### Configuration
 

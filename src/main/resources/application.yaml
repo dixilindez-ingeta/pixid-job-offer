@@ -17,6 +17,13 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 50
+  docker:
+    compose:
+      # dev mode (./mvnw spring-boot:run): only the database, the app runs on the host
+      start:
+        arguments: postgres
+      stop:
+        arguments: postgres
   web:
     locale: en
     locale-resolver: fixed

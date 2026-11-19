@@ -208,3 +208,32 @@ impossible dans l'état actuel de la ressource ».
   - #### Négatives :
   La distinction 400/409 pour une offre incomplète (création vs transition) doit être comprise des clients ; elle est
   documentée dans OpenAPI et le README.
+
+# ADR-08 : Livraison en conteneurs (Dockerfile multi-stage, Compose)
+
+- ### Contexte :
+
+Le livrable doit pouvoir être lancé avec un simple `docker compose up --build`, sans JDK sur la machine. Le même
+`compose.yml` sert aussi au mode développement : `spring-boot-docker-compose` le démarre automatiquement au lancement de
+`./mvnw spring-boot:run`.
+
+- ### Décision :
+  - `Dockerfile` **multi-stage** : compilation avec `eclipse-temurin:25-jdk` et le wrapper Maven (cache `~/.m2` monté
+    via BuildKit), puis image d'exécution `eclipse-temurin:25-jre`. Le jar est extrait en couches (`jarmode=tools`) pour
+    que les dépendances, qui changent peu, forment une couche Docker réutilisable. Exécution avec un utilisateur non
+    root.
+  - Les tests ne sont **pas** lancés pendant `docker build` : ils ont besoin de Docker (Testcontainers) et sont lancés
+    par `./mvnw verify`.
+  - Service `app` dans `compose.yml` : dépend de `postgres` en état *healthy*. La datasource est passée par variables
+    d'environnement (`SPRING_DATASOURCE_*`), donc `application.yaml` reste valable tel quel en dehors des conteneurs.
+  - En mode développement, l'intégration Docker Compose de Spring Boot ne démarre et n'arrête que `postgres`
+    (`spring.docker.compose.start.arguments` / `stop.arguments`). Le service `app` porte le label
+    `org.springframework.boot.ignore` pour ne jamais être pris pour une connexion de service.
+
+- ### Conséquences :
+  - #### Positives :
+  Un seul fichier Compose pour les deux usages. Image d'exécution légère sans outils de build. Les reconstructions sont
+  rapides quand seul le code change.
+  - #### Négatives :
+  L'image n'est pas validée par les tests au moment de sa construction : la CI devra lancer `./mvnw verify` avant de
+  construire l'image. Les deux modes de lancement utilisent le port 8486 : un seul peut tourner à la fois.
