@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U super_jobber -d job_offer" ]
+      test: [ "CMD-SHELL", "pg_isready -h localhost -U super_jobber -d job_offer" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -19,6 +19,7 @@ services:
   app:
     build: .
     container_name: job-offer-app
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -26,7 +27,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/job_offer
       SPRING_DATASOURCE_USERNAME: super_jobber
       SPRING_DATASOURCE_PASSWORD: my_secret
-      SPRING_DOCKER_COMPOSE_ENABLED: "false"
     ports:
       - "8486:8486"
     labels:

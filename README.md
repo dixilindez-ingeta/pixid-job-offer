@@ -206,3 +206,5 @@ route : [docs/roadmap.md](docs/roadmap.md).
 - Cache de la configuration entreprise.
 - Recherche plein texte (titre, ville) et filtres supplémentaires.
 - Authentification / autorisation par entreprise.
+- Gestion des secrets (mot de passe de la base dans un `.env` ou un gestionnaire de secrets, plutôt qu'en clair dans
+  `compose.yml` et `application.yaml`).

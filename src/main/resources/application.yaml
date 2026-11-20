@@ -29,7 +29,6 @@ spring:
     locale-resolver: fixed
   flyway:
     enabled: true
-    baseline-on-migrate: true
 
 springdoc:
   api-docs:

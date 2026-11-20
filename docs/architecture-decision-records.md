@@ -221,14 +221,20 @@ Le livrable doit pouvoir être lancé avec un simple `docker compose up --build`
   - `Dockerfile` **multi-stage** : compilation avec `eclipse-temurin:25-jdk` et le wrapper Maven (cache `~/.m2` monté
     via BuildKit), puis image d'exécution `eclipse-temurin:25-jre`. Le jar est extrait en couches (`jarmode=tools`) pour
     que les dépendances, qui changent peu, forment une couche Docker réutilisable. Exécution avec un utilisateur non
-    root.
+    root ; taille du heap relative à la mémoire du conteneur (`-XX:MaxRAMPercentage=50`, surchargeable par
+    `JAVA_TOOL_OPTIONS`).
   - Les tests ne sont **pas** lancés pendant `docker build` : ils ont besoin de Docker (Testcontainers) et sont lancés
     par `./mvnw verify`.
-  - Service `app` dans `compose.yml` : dépend de `postgres` en état *healthy*. La datasource est passée par variables
+  - Service `app` dans `compose.yml` : dépend de `postgres` en état *healthy*. Le healthcheck interroge Postgres en TCP
+    (`pg_isready -h localhost`) : le socket local répond déjà pendant l'initialisation de la base, avant que le serveur
+    n'accepte les connexions réseau. `restart: on-failure` couvre un échec de connexion au démarrage. La datasource est
+    passée par variables
     d'environnement (`SPRING_DATASOURCE_*`), donc `application.yaml` reste valable tel quel en dehors des conteneurs.
   - En mode développement, l'intégration Docker Compose de Spring Boot ne démarre et n'arrête que `postgres`
     (`spring.docker.compose.start.arguments` / `stop.arguments`). Le service `app` porte le label
     `org.springframework.boot.ignore` pour ne jamais être pris pour une connexion de service.
+  - Pas de `flyway.baseline-on-migrate` : la base est toujours créée par les migrations. Sur un schéma non vide sans
+    historique Flyway, l'application refuse de démarrer au lieu de marquer V1 comme appliquée sans l'exécuter.
 
 - ### Conséquences :
   - #### Positives :
